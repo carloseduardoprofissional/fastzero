@@ -1,11 +1,13 @@
 from http import HTTPStatus
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 
-from fast_zero.schemas import Message
+from fast_zero.schemas import Message, UserDB, UserList, UserPublic, UserSchema
 
 app = FastAPI()
+
+database = []
 
 
 @app.get('/', status_code=HTTPStatus.OK, response_model=Message)
@@ -21,3 +23,51 @@ def hello_html():
         <body><h1>Olá, FastAPI!</h1></body>
     </html>
 """
+
+
+@app.post('/users/', status_code=HTTPStatus.CREATED, response_model=UserPublic)
+def create_user(user: UserSchema):
+    user_id = len(database) + 1
+
+    user_with_id = UserDB(**user.model_dump(), id=user_id)
+    database.append(user_with_id)
+
+    return user_with_id
+
+
+@app.get('/users/', response_model=UserList)
+def read_users():
+    return {'users': database}
+
+
+@app.get('/users/{user_id}', response_model=UserPublic)
+def get_expecific_user(user_id: int):
+    if user_id <= 0 or user_id > len(database):
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail='Not Found')
+
+    for user_from_db in database:
+        if user_from_db.id == user_id:
+            return user_from_db
+
+
+@app.put('/users/{user_id}', response_model=UserPublic)
+def update_user(user_id: int, user: UserSchema):
+    if user_id <= 0 or user_id > len(database):
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail='Not Found')
+
+    for user_from_db in database:
+        if user_from_db.id == user_id:
+            user_updated = UserDB(**user.model_dump(), id=user_id)
+            database[database.index(user_from_db)] = user_updated
+            return user_updated
+
+
+@app.delete('/users/{user_id}', response_model=Message)
+def delete_user(user_id: int):
+    if user_id <= 0 or user_id > len(database):
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail='Not Found')
+
+    for user_from_db in database:
+        if user_from_db.id == user_id:
+            database.remove(user_from_db)
+            return {'message': 'User successfully deleted'}
