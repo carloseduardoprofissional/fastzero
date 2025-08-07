@@ -19,4 +19,5 @@ def test_deve_criar_user_no_banco_de_dados(session, mock_db_time):
         'email': 'carlos@email.com',
         'password': '1234',
         'created_at': time,
+        'updated_at': time,
     }
